@@ -3,6 +3,7 @@ using Serilog.Formatting.Display;
 using Serilog.Parsing;
 using Serilog.Sinks.BrowserConsole.Output;
 using System;
+using System.Collections.Generic;
 using Xunit;
 
 namespace Serilog.Sinks.BrowserConsole.Tests
@@ -103,6 +104,22 @@ namespace Serilog.Sinks.BrowserConsole.Tests
             var formatter = new OutputTemplateRenderer($"<<{STYLE1}>>A first<<_>> % sign <<{STYLE2}>>{{{OutputProperties.MessagePropertyName}}}<<_>>", default);
             var args = formatter.Format(new LogEvent(DateTimeOffset.Now, LogEventLevel.Verbose, null, new MessageTemplateParser().Parse(MESSAGE), Array.Empty<LogEventProperty>()));
             Assert.Equal([$"%cA first%c %% sign %c{MESSAGE.Replace($"%", "%%")}%c", STYLE1, "", STYLE2, ""], args);
+        }
+
+        [Fact]
+        public void SupportsTokenStyling()
+        {
+            var MESSAGE = $"Test";
+            var LEVEL = LogEventLevel.Verbose;
+            var NOW = DateTimeOffset.Now;
+            var formatter = new OutputTemplateRenderer($"{{{OutputProperties.LevelPropertyName}}}@{{{OutputProperties.TimestampPropertyName}:HH:mm}}: {{{OutputProperties.MessagePropertyName}}}", default, new Dictionary<string, string>
+            {
+                {OutputProperties.LevelPropertyName, STYLE1 },
+                {OutputProperties.TimestampPropertyName, STYLE2 },
+                {OutputProperties.MessagePropertyName, STYLE3 }
+            });
+            var args = formatter.Format(new LogEvent(NOW, LEVEL, null, new MessageTemplateParser().Parse(MESSAGE), Array.Empty<LogEventProperty>()));
+            Assert.Equal([$"%c%s%c@%c%s%c: %c{MESSAGE}%c", STYLE1, LEVEL.ToString(), "", STYLE2, NOW.ToString("HH:mm"), "", STYLE3, ""], args);
         }
     }
 }
