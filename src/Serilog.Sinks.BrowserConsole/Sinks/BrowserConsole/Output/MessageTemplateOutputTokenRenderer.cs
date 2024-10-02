@@ -26,11 +26,11 @@ class MessageTemplateOutputTokenRenderer : OutputTemplateTokenRenderer
             switch (token)
             {
                 case TextToken tt:
-                    emitToken(tt.Text);
+                    new TextTokenRenderer(tt.Text).Render(logEvent, emitToken);
                     break;
                 case PropertyToken pt:
                     if (logEvent.Properties.TryGetValue(pt.PropertyName, out var propertyValue))
-                        emitToken(ObjectModelInterop.ToInteropValue(propertyValue));
+                        emitToken.Object(ObjectModelInterop.ToInteropValue(propertyValue));
                     break;
                 default:
                     throw new InvalidOperationException();

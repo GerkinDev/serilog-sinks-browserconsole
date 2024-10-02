@@ -36,7 +36,7 @@ class PropertiesTokenRenderer : OutputTemplateTokenRenderer
 
         foreach (var property in included)
         {
-            emitToken(ObjectModelInterop.ToInteropValue(property.Value, _token.Format));
+            emitToken.Object(ObjectModelInterop.ToInteropValue(property.Value, _token.Format));
         }
     }
 

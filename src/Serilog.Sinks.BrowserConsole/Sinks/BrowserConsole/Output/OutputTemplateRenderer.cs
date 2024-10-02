@@ -36,11 +36,11 @@ class OutputTemplateRenderer
     {
         ArgumentNullException.ThrowIfNull(logEvent);
 
-        var buffer = new List<object?>(_renderers.Length * 2);
+        var tokenEmitter = new TokenEmitter();
         foreach (var renderer in _renderers)
         {
-            renderer.Render(logEvent, buffer.Add);
+            renderer.Render(logEvent, tokenEmitter);
         }
-        return buffer.ToArray();
+        return tokenEmitter.YieldArgs();
     }
 }

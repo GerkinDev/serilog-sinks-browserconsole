@@ -13,10 +13,38 @@
 // limitations under the License.
 
 using Serilog.Events;
+using System.Text;
 
 namespace Serilog.Sinks.BrowserConsole.Output;
 
-delegate void TokenEmitter(object? token);
+class TokenEmitter
+{
+    private StringBuilder _template = new();
+    private List<object?> _args = [];
+
+    internal void Literal(string text)
+    {
+        _template.Append(text.Replace("%", "%%"));
+    }
+
+    internal void Text(string text) {
+        _template.Append("%s");
+        _args.Add(text);
+    }
+
+    internal void Object(object? value)
+    {
+        _template.Append("%o");
+        _args.Add(value);
+    }
+    internal object?[] YieldArgs() => [_template.ToString(), .. _args];
+
+    internal void Style(string styleContent)
+    {
+        _template.Append("%c");
+        _args.Add(styleContent);
+    }
+} 
     
 abstract class OutputTemplateTokenRenderer
 {

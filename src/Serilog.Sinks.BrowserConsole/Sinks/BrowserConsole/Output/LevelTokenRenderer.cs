@@ -31,6 +31,6 @@ class LevelTokenRenderer : OutputTemplateTokenRenderer
     {
         var moniker = LevelOutputFormat.GetLevelMoniker(logEvent.Level, _levelToken.Format);
         var alignedOutput = Padding.Apply(moniker, _levelToken.Alignment);
-        emitToken(alignedOutput);
+        emitToken.Text(alignedOutput);
     }
 }
