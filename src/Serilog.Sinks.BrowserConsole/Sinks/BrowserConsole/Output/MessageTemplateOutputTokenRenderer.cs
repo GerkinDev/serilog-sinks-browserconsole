@@ -30,7 +30,9 @@ class MessageTemplateOutputTokenRenderer : OutputTemplateTokenRenderer
                     break;
                 case PropertyToken pt:
                     if (logEvent.Properties.TryGetValue(pt.PropertyName, out var propertyValue))
-                        emitToken.Object(ObjectModelInterop.ToInteropValue(propertyValue));
+                    {
+                        new PropertyTokenRenderer(pt, propertyValue).Render(logEvent, emitToken);
+                    }
                     break;
                 default:
                     throw new InvalidOperationException();

@@ -14,6 +14,7 @@
 
 using Serilog.Events;
 using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Serilog.Sinks.BrowserConsole.Output;
 
@@ -22,21 +23,35 @@ class TokenEmitter
     private StringBuilder _template = new();
     private List<object?> _args = [];
 
-    internal void Literal(string text)
+    internal void Literal(string template)
     {
-        _template.Append(text.Replace("%", "%%"));
+        _template.Append(template.Replace("%", "%%"));
     }
 
-    internal void Text(string text) {
+    internal void Text(object @string)
+    {
         _template.Append("%s");
-        _args.Add(text);
+        _args.Add(@string);
     }
+    internal void Text(string @string) => Text((object)@string);
 
-    internal void Object(object? value)
+    internal void Object(object? @object)
     {
         _template.Append("%o");
-        _args.Add(value);
+        _args.Add(@object);
     }
+
+    internal void Integer(object @int)
+    {
+        _template.Append("%d");
+        _args.Add(@int);
+    }
+
+    internal void Float(object @float) {
+        _template.Append("%f");
+        _args.Add(@float);
+    }
+
     internal object?[] YieldArgs() => [_template.ToString(), .. _args];
 
     internal void Style(string styleContent)
