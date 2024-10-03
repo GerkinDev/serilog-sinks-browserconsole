@@ -64,7 +64,7 @@ namespace Serilog.Sinks.BrowserConsole.Tests
             };
             var formatter = new OutputTemplateRenderer($"<<{STYLE1}>>Hello<<_>> <<{STYLE2}>>{{{OutputProperties.PropertiesPropertyName}}}<<_>>", default);
             var args = formatter.Format(new LogEvent(DateTimeOffset.Now, LogEventLevel.Verbose, null, MessageTemplate.Empty, PROPERTIES));
-            Assert.Equal([$"%cHello%c %c%o%c", STYLE1, "", STYLE2, ((ScalarValue)PROPERTIES[0].Value).Value, ""], args);
+            Assert.Equal([$"%cHello%c %c%d%c", STYLE1, "", STYLE2, ((ScalarValue)PROPERTIES[0].Value).Value, ""], args);
         }
 
         [Fact]
@@ -77,24 +77,61 @@ namespace Serilog.Sinks.BrowserConsole.Tests
         }
 
         [Fact]
-        public void SupportsStylingWithMessageContainingInterpolation()
-        {
-            var PLACE = "my tests";
-            var MESSAGE = "and welcome to {Place}";
-            var formatter = new OutputTemplateRenderer($"<<{STYLE1}>>Hello<<_>> <<{STYLE2}>>{{{OutputProperties.MessagePropertyName}}}<<_>>", default);
-            var args = formatter.Format(new LogEvent(DateTimeOffset.Now, LogEventLevel.Verbose, null, new MessageTemplateParser().Parse(MESSAGE), new[]{
-                new LogEventProperty("Place", new ScalarValue(PLACE)),
-            }));
-            Assert.Equal([$"%cHello%c %c{MESSAGE.Replace("{Place}", "%o")}%c", STYLE1, "", STYLE2, PLACE, ""], args);
-        }
-
-        [Fact]
-        public void SupportsStylingWithinSimpleMessage()
+        public void SupportsStylingWithinSimpleMessageContainingStyle()
         {
             var MESSAGE = $"and <<{STYLE3}>>welcome";
             var formatter = new OutputTemplateRenderer($"<<{STYLE1}>>Hello<<_>> <<{STYLE2}>>{{{OutputProperties.MessagePropertyName}}}<<_>>", default);
             var args = formatter.Format(new LogEvent(DateTimeOffset.Now, LogEventLevel.Verbose, null, new MessageTemplateParser().Parse(MESSAGE), Array.Empty<LogEventProperty>()));
             Assert.Equal([$"%cHello%c %c{MESSAGE.Replace($"<<{STYLE3}>>", "%c")}%c", STYLE1, "", STYLE2, STYLE3, ""], args);
+        }
+
+        [Theory]
+        [InlineData("short", "%d", (short)42)]
+        [InlineData("int", "%d", (int)42)]
+        [InlineData("long", "%d", (long)42)]
+        [InlineData("ushort", "%d", (ushort)42)]
+        [InlineData("uint", "%d", (uint)42)]
+        [InlineData("ulong", "%d", (ulong)42)]
+        [InlineData("byte", "%d", (byte)42)]
+        [InlineData("sbyte", "%d", (sbyte)42)]
+        // [InlineData("decimal", "%f", (decimal)42m)] // Unsupported
+        [InlineData("double", "%f", (double)42m)]
+        [InlineData("float", "%f", (float)42m)]
+        [InlineData("string", "%s", (string)"foo")]
+        [InlineData("char", "%s", (char)'f')]
+        public void SupportsStylingWithMessageContainingScalarStandardValues(string propertyName, string template, object value)
+        {
+            var MESSAGE = $"where the prop is {{{propertyName}}}";
+            var PROPERTIES = new[] {
+                new LogEventProperty(propertyName, new ScalarValue(value)),
+            };
+            var formatter = new OutputTemplateRenderer($"<<{STYLE1}>>Test {{{OutputProperties.MessagePropertyName}}} End<<_>>", default);
+            var args = formatter.Format(new LogEvent(DateTimeOffset.Now, LogEventLevel.Verbose, null, new MessageTemplateParser().Parse(MESSAGE), PROPERTIES));
+            Assert.Equal([$"%cTest where the prop is {template} End%c", STYLE1, ((ScalarValue)PROPERTIES[0].Value).Value, ""], args);
+        }
+
+        [Fact]
+        public void SupportsStylingWithMessageContainingScalarDecimal()
+        {
+            var MESSAGE = $"where the prop is {{decimal}}";
+            var PROPERTIES = new[] {
+                new LogEventProperty("decimal", new ScalarValue((decimal)42m)),
+            };
+            var formatter = new OutputTemplateRenderer($"<<{STYLE1}>>Test {{{OutputProperties.MessagePropertyName}}} End<<_>>", default);
+            var args = formatter.Format(new LogEvent(DateTimeOffset.Now, LogEventLevel.Verbose, null, new MessageTemplateParser().Parse(MESSAGE), PROPERTIES));
+            Assert.Equal([$"%cTest where the prop is %f End%c", STYLE1, ((ScalarValue)PROPERTIES[0].Value).Value, ""], args);
+        }
+
+        [Fact]
+        public void SupportsStylingWithMessageContainingScalarObject()
+        {
+            var MESSAGE = $"where the prop is {{object}}";
+            var PROPERTIES = new[] {
+                new LogEventProperty("object", new ScalarValue(new { Hello = "world"})),
+            };
+            var formatter = new OutputTemplateRenderer($"<<{STYLE1}>>Test {{{OutputProperties.MessagePropertyName}}} End<<_>>", default);
+            var args = formatter.Format(new LogEvent(DateTimeOffset.Now, LogEventLevel.Verbose, null, new MessageTemplateParser().Parse(MESSAGE), PROPERTIES));
+            Assert.Equal([$"%cTest where the prop is %c%o%c End%c", STYLE1, "", ((ScalarValue)PROPERTIES[0].Value).Value, STYLE1, ""], args);
         }
 
         [Fact]
