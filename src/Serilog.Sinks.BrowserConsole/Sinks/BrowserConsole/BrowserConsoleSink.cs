@@ -20,34 +20,50 @@ using Serilog.Sinks.BrowserConsole.Output;
 
 namespace Serilog.Sinks.BrowserConsole;
 
-class BrowserConsoleSink : ILogEventSink
+internal class BrowserConsoleSink : ILogEventSink
 {
-    readonly IJSRuntime _runtime;
-    readonly OutputTemplateRenderer _formatter;
+	private readonly OutputTemplateRenderer _formatter;
+	private readonly IJSRuntime _runtime;
 
-    public BrowserConsoleSink(IJSRuntime? runtime, OutputTemplateRenderer formatter)
-    {
-        _runtime = runtime ?? DefaultWebAssemblyJSRuntime.Instance;
-        _formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
-    }
+	public BrowserConsoleSink(IJSRuntime? runtime, OutputTemplateRenderer formatter)
+	{
+		_runtime = runtime ?? DefaultWebAssemblyJSRuntime.Instance;
+		_formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
+	}
 
-    public void Emit(LogEvent logEvent)
-    {
-        ArgumentNullException.ThrowIfNull(logEvent);
-        var outputStream = SelectConsoleMethod(logEvent.Level);
-        var args = _formatter.Format(logEvent);
-        _runtime.InvokeAsync<string>(outputStream, args)
-            .AsTask()
-            .ContinueWith(t => SelfLog.WriteLine("Failed to emit log event: {0}", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
-    }
+	public void Emit(LogEvent logEvent)
+	{
+		ArgumentNullException.ThrowIfNull(logEvent);
+		var outputStream = SelectConsoleMethod(logEvent.Level);
+		var args = _formatter.Format(logEvent);
 
-    static string SelectConsoleMethod(LogEventLevel logLevel) =>
-        logLevel switch
-        {
-            >= LogEventLevel.Error => "console.error",
-            LogEventLevel.Warning => "console.warn",
-            LogEventLevel.Information => "console.info",
-            LogEventLevel.Debug => "console.debug",
-            _ => "console.log"
-        };
+		if (_runtime is IJSInProcessRuntime inProcess)
+		{
+			try
+			{
+				inProcess.InvokeVoid(outputStream, args);
+			}
+			catch (Exception ex)
+			{
+				SelfLog.WriteLine("Failed to emit log event: {0}", ex);
+			}
+
+			return;
+		}
+
+		_runtime.InvokeVoidAsync(outputStream, args)
+			.AsTask()
+			.ContinueWith(t => SelfLog.WriteLine("Failed to emit log event: {0}", t.Exception),
+				TaskContinuationOptions.OnlyOnFaulted);
+	}
+
+	private static string SelectConsoleMethod(LogEventLevel logLevel) =>
+		logLevel switch
+		{
+			>= LogEventLevel.Error => "console.error",
+			LogEventLevel.Warning => "console.warn",
+			LogEventLevel.Information => "console.info",
+			LogEventLevel.Debug => "console.debug",
+			_ => "console.log"
+		};
 }
